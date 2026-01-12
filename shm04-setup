@@ -541,22 +541,64 @@ disable() {
 }
 
 install() {
+	opt=''
+
+	while [ 1 -le "${#}" ]; do
+		case "${1}" in
+			-*) opt="${opt-} ${1}";;
+			*) break;;
+		esac
+
+		shift
+	done
+
 	name="${1}"
+	checksum="${2-}"
 
 	case "${name}" in
 		'http://'* | 'https://'* | 'ftp://'*)
 			message "${name} をダウンロードしています。"
-			wget -O "${TMPDIR:-/tmp}/${0}-${$}.apk" "${name}"
+			curl -fLsSo "${TMPDIR:-/tmp}/${0}-${$}.apk" "${name}"
 			name="${TMPDIR:-/tmp}/${0}-${$}.apk"
+
+			trap 'rm -f "${TMPDIR:-/tmp}/${0}-${$}.apk"' EXIT
 			;;
 	esac
 
-	adb shell pm install "${name}"
+	case "${#checksum}" in
+		0) fsum='';;
+		32) fsum=$(md5sum "${name}");;
+		40) fsum=$(sha1sum "${name}");;
+		64) fsum=$(sha256sum "${name}");;
+		128) fsum=$(sha512sum "${name}");;
+		*)
+			message 'チェックサムの形式が不明です。'
+			return 1
+			;;
+	esac
 
-	rm -f "${TMPDIR:-/tmp}/${0}-${$}.apk"
+	if [ -z "${fsum}" ]; then
+		:
+	elif [ "${checksum}" != "${fsum%% *}" ]; then
+		message 'ファイルがチェックサムと一致しません。'
+		return 1
+	fi
+
+	adb install ${opt} "${name}"
 }
 
 uninstall() {
+	opt=''
+
+	while [ 1 -le "${#}" ]; do
+		case "${1}" in
+			-*) opt="${opt-} ${1}";;
+			*) break;;
+		esac
+
+		shift
+	done
+
 	name="${1}"
 
 	path_check "${name}"
