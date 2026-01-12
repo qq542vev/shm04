@@ -16,7 +16,7 @@ adb shell settings put global stay_on_while_plugged_in 3
 # 解像度
 adb shell wm size 360x640
 # DPI
-adb shell wm density 180
+adb shell wm density 160
 # 自動回転をオフ
 adb shell settings put system accelerometer_rotation 0
 
